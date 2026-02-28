@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>Academic Performance Dashboard</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
+    <style>
+        * { font-family: 'Inter', sans-serif; }
+        body { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; }
+        .glass { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); }
+        .card-hover { transition: all 0.3s ease; }
+        .card-hover:hover { transform: translateY(-4px); box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1); }
+    </style>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: "#667eea",
+                        secondary: "#764ba2",
+                    },
+                },
+            },
+        }
+    </script>
+</head>
+
+<body class="antialiased">
+    <div class="min-h-screen py-8 px-4">
+        <div class="max-w-7xl mx-auto">
+            <!-- Header -->
+            <div class="glass rounded-2xl p-8 mb-8 shadow-2xl">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h1 class="text-4xl font-bold bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">Dashboard Académico</h1>
+                        <p class="text-gray-600 mt-2">Sistema de Análisis de Rendimiento Universitario</p>
+                    </div>
+                    <div class="flex gap-3">
+                        <button onclick="exportData('csv')" class="px-4 py-2 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl hover:shadow-lg transition-all flex items-center gap-2">
+                            <span class="material-symbols-outlined text-lg">description</span>
+                            CSV
+                        </button>
+                        <button onclick="exportData('xlsx')" class="px-4 py-2 bg-gradient-to-r from-blue-500 to-cyan-600 text-white rounded-xl hover:shadow-lg transition-all flex items-center gap-2">
+                            <span class="material-symbols-outlined text-lg">table_chart</span>
+                            Excel
+                        </button>
+                        <button onclick="exportPDF()" class="px-4 py-2 bg-gradient-to-r from-red-500 to-pink-600 text-white rounded-xl hover:shadow-lg transition-all flex items-center gap-2">
+                            <span class="material-symbols-outlined text-lg">picture_as_pdf</span>
+                            PDF
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Filters -->
+                <div class="flex gap-4 mt-6">
+                    <div class="flex-1">
+                        <label class="text-xs font-bold text-gray-500 uppercase mb-2 block">Carrera</label>
+                        <select id="filterCarrera" onchange="updateDashboard()" class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-purple-500 focus:ring-0 transition-colors">
+                            <option value="todas las carreras">Todas las Carreras</option>
+                            <option value="ingenieria industrial">Ingeniería Industrial</option>
+                            <option value="ingenieria civil">Ingeniería Civil</option>
+                            <option value="ingenieria mecanica">Ingeniería Mecánica</option>
+                            <option value="ingenieria en computacion">Ingeniería en Computación</option>
+                        </select>
+                    </div>
+                    <div class="flex-1">
+                        <label class="text-xs font-bold text-gray-500 uppercase mb-2 block">Año</label>
+                        <select id="filterAnio" onchange="updateDashboard()" class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-purple-500 focus:ring-0 transition-colors">
+                            <option value="2024">2024</option>
+                            <option value="2023">2023</option>
+                            <option value="2022">2022</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- KPIs -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                <div class="glass rounded-2xl p-6 shadow-xl card-hover">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm font-semibold text-gray-500 uppercase tracking-wide">Promedio General</p>
+                            <h3 id="kpiAvg" class="text-4xl font-bold text-gray-900 mt-2">--</h3>
+                        </div>
+                        <div class="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center shadow-lg">
+                            <span class="material-symbols-outlined text-white text-3xl">grade</span>
+                        </div>
+                    </div>
+                    <div class="mt-4 flex items-center gap-2 text-green-600 text-sm font-semibold">
+                        <span class="material-symbols-outlined text-lg">trending_up</span>
+                        <span>Rendimiento académico</span>
+                    </div>
+                </div>
+
+                <div class="glass rounded-2xl p-6 shadow-xl card-hover">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm font-semibold text-gray-500 uppercase tracking-wide">Tasa Reprobación</p>
+                            <h3 id="kpiFail" class="text-4xl font-bold text-gray-900 mt-2">--%</h3>
+                        </div>
+                        <div class="w-16 h-16 rounded-2xl bg-gradient-to-br from-red-400 to-red-600 flex items-center justify-center shadow-lg">
+                            <span class="material-symbols-outlined text-white text-3xl">assignment_late</span>
+                        </div>
+                    </div>
+                    <div class="mt-4 flex items-center gap-2 text-red-600 text-sm font-semibold">
+                        <span class="material-symbols-outlined text-lg">warning</span>
+                        <span>Requiere atención</span>
+                    </div>
+                </div>
+
+                <div class="glass rounded-2xl p-6 shadow-xl card-hover">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm font-semibold text-gray-500 uppercase tracking-wide">Estudiantes en Riesgo</p>
+                            <h3 id="kpiRisk" class="text-4xl font-bold text-gray-900 mt-2">--</h3>
+                        </div>
+                        <div class="w-16 h-16 rounded-2xl bg-gradient-to-br from-orange-400 to-orange-600 flex items-center justify-center shadow-lg">
+                            <span class="material-symbols-outlined text-white text-3xl">group</span>
+                        </div>
+                    </div>
+                    <div class="mt-4 flex items-center gap-2 text-orange-600 text-sm font-semibold">
+                        <span class="material-symbols-outlined text-lg">health_and_safety</span>
+                        <span>Calificación < 6.0</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Charts -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+                <div class="glass rounded-2xl p-6 shadow-xl">
+                    <h4 class="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
+                        <span class="material-symbols-outlined text-red-500">trending_down</span>
+                        Materias con Mayor Reprobación
+                    </h4>
+                    <div id="listReprobacion" class="space-y-4"></div>
+                </div>
+
+                <div class="glass rounded-2xl p-6 shadow-xl">
+                    <h4 class="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
+                        <span class="material-symbols-outlined text-purple-500">show_chart</span>
+                        Tendencia por Semestre
+                    </h4>
+                    <div class="relative h-48 w-full mt-4">
+                        <svg id="chartTendencia" class="w-full h-full" preserveAspectRatio="none" viewBox="0 0 500 100"></svg>
+                        <div id="labelsTendencia" class="flex justify-between mt-4 text-xs text-gray-500 font-semibold"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bottom Section -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <div class="glass rounded-2xl p-6 shadow-xl">
+                    <h4 class="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
+                        <span class="material-symbols-outlined text-indigo-500">school</span>
+                        Ranking de Carreras
+                    </h4>
+                    <div id="listCarreras" class="space-y-4"></div>
+                </div>
+
+                <div class="glass rounded-2xl shadow-xl lg:col-span-2 overflow-hidden">
+                    <div class="p-6 border-b border-gray-200 bg-gradient-to-r from-red-50 to-orange-50">
+                        <h4 class="text-xl font-bold text-gray-900 flex items-center gap-2">
+                            <span class="material-symbols-outlined text-red-600">emergency</span>
+                            Alumnos en Riesgo Académico
+                        </h4>
+                        <p class="text-sm text-gray-600 mt-1">Estudiantes con promedio menor a 6.0</p>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-6 py-4 text-left text-xs font-bold text-gray-600 uppercase">ID</th>
+                                    <th class="px-6 py-4 text-left text-xs font-bold text-gray-600 uppercase">Carrera</th>
+                                    <th class="px-6 py-4 text-left text-xs font-bold text-gray-600 uppercase">Materia</th>
+                                    <th class="px-6 py-4 text-center text-xs font-bold text-gray-600 uppercase">Calificación</th>
+                                    <th class="px-6 py-4 text-right text-xs font-bold text-gray-600 uppercase">Estado</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tableRiesgos" class="divide-y divide-gray-100"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        async function updateDashboard() {
+            const carrera = document.getElementById('filterCarrera').value;
+            const anio = document.getElementById('filterAnio').value;
+            
+            const response = await fetch(`/api/data?carrera=${encodeURIComponent(carrera)}&anio=${anio}`);
+            const data = await response.json();
+
+            // KPIs
+            document.getElementById('kpiAvg').innerText = data.kpis.avg_grade;
+            document.getElementById('kpiFail').innerText = data.kpis.fail_rate + '%';
+            document.getElementById('kpiRisk').innerText = data.kpis.risk_count;
+
+            // Reprobación
+            let reproHtml = '';
+            for (const [materia, valor] of Object.entries(data.reprobacion)) {
+                const color = valor > 25 ? 'bg-red-400' : 'bg-orange-400';
+                reproHtml += `<div class="space-y-2"><div class="flex justify-between text-xs font-medium"><span class="text-slate-600 capitalize">${materia}</span><span class="text-slate-900">${valor}%</span></div><div class="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden"><div class="${color} h-full rounded-full" style="width: ${valor}%"></div></div></div>`;
+            }
+            document.getElementById('listReprobacion').innerHTML = reproHtml;
+
+            // Tendencia
+            const semestres = Object.keys(data.tendencia).sort();
+            const valores = semestres.map(s => data.tendencia[s]);
+            const max = Math.max(...valores);
+            const min = Math.min(...valores);
+            const range = max - min || 1;
+            
+            let pathData = '', pathFill = '', circles = '';
+            semestres.forEach((sem, i) => {
+                const x = (i / (semestres.length - 1)) * 500;
+                const y = 100 - ((valores[i] - min) / range) * 80;
+                pathData += `${i === 0 ? 'M' : ' L'}${x},${y}`;
+                circles += `<circle cx="${x}" cy="${y}" fill="#4f46e5" r="4"></circle>`;
+            });
+            pathFill = pathData + ' V100 H0 Z';
+            
+            document.getElementById('chartTendencia').innerHTML = `
+                <defs><linearGradient id="lineGrad" x1="0%" x2="0%" y1="0" y2="100%"><stop offset="0%" style="stop-color:#4f46e5;stop-opacity:0.2"></stop><stop offset="100%" style="stop-color:#4f46e5;stop-opacity:0"></stop></linearGradient></defs>
+                <line stroke="#f1f5f9" stroke-width="1" x1="0" x2="500" y1="20" y2="20"></line>
+                <line stroke="#f1f5f9" stroke-width="1" x1="0" x2="500" y1="40" y2="40"></line>
+                <line stroke="#f1f5f9" stroke-width="1" x1="0" x2="500" y1="60" y2="60"></line>
+                <line stroke="#f1f5f9" stroke-width="1" x1="0" x2="500" y1="80" y2="80"></line>
+                <path d="${pathFill}" fill="url(#lineGrad)"></path>
+                <path d="${pathData}" fill="none" stroke="#4f46e5" stroke-linecap="round" stroke-linejoin="round" stroke-width="3"></path>
+                ${circles}`;
+            
+            document.getElementById('labelsTendencia').innerHTML = semestres.map(s => `<span>S${s}</span>`).join('');
+
+            // Carreras
+            let carrHtml = '';
+            for (const [carr, val] of Object.entries(data.prom_carreras)) {
+                carrHtml += `<div><div class="flex justify-between text-xs mb-2"><span class="text-slate-600 font-medium capitalize">${carr}</span><span class="font-bold text-slate-900">${val}</span></div><div class="w-full bg-slate-100 h-8 rounded-lg overflow-hidden flex items-center"><div class="bg-indigo-500 h-full rounded-r-sm" style="width: ${val * 10}%"></div></div></div>`;
+            }
+            document.getElementById('listCarreras').innerHTML = carrHtml;
+
+            // Tabla
+            let tableHtml = '';
+            data.tabla_riesgos.forEach(r => {
+                tableHtml += `<tr class="hover:bg-slate-50 transition-colors"><td class="px-6 py-4 text-sm font-semibold text-slate-900">#${r.id_estudiante}</td><td class="px-6 py-4 text-sm text-slate-600 capitalize">${r.carrera}</td><td class="px-6 py-4 text-sm text-slate-600 capitalize">${r.materia}</td><td class="px-6 py-4 text-center"><span class="text-sm font-bold text-red-600">${r.calificacion}</span></td><td class="px-6 py-4 text-right"><span class="px-2 py-0.5 rounded-full bg-red-100 text-red-700 text-[10px] font-bold">ALERTA</span></td></tr>`;
+            });
+            document.getElementById('tableRiesgos').innerHTML = tableHtml;
+        }
+
+        function exportData(formato) {
+            const carrera = document.getElementById('filterCarrera').value;
+            const anio = document.getElementById('filterAnio').value;
+            window.location.href = `/api/export?carrera=${encodeURIComponent(carrera)}&anio=${anio}&formato=${formato}`;
+        }
+
+        function exportPDF() {
+            const carrera = document.getElementById('filterCarrera').value;
+            const anio = document.getElementById('filterAnio').value;
+            window.open(`/api/export/pdf?carrera=${encodeURIComponent(carrera)}&anio=${anio}`, '_blank');
+        }
+
+        function importData(event) {
+            alert('Funcionalidad de importación pendiente de implementar');
+        }
+
+        window.onload = updateDashboard;
+    </script>
+</body>
+
+</html>

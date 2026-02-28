@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>Exportar PDF</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
+    <style>
+        @media print {
+            body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        }
+    </style>
+    <style type="text/tailwindcss">
+        :root {
+            --primary-color: #4f46e5;
+            --bg-soft: #f8fafc;
+        }
+        body {
+            font-family: 'Lexend', sans-serif;
+            background-color: var(--bg-soft);
+        }
+    </style>
+    <script id="tailwind-config">
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#4f46e5",
+                        "accent-blue": "#e0f2fe",
+                        "accent-red": "#fef2f2",
+                        "accent-orange": "#fff7ed",
+                        "accent-green": "#f0fdf4",
+                    },
+                },
+            },
+        }
+    </script>
+</head>
+<body class="text-slate-800 antialiased p-8">
+    <div id="content">
+        <div class="text-center mb-8">
+            <h1 class="text-3xl font-bold text-slate-900">Reporte Académico</h1>
+            <p class="text-slate-500 mt-2">Sistema de Análisis de Rendimiento Universitario</p>
+        </div>
+        
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <p class="text-slate-500 text-sm font-medium">Average Grade</p>
+                        <h3 id="kpiAvg" class="text-3xl font-bold text-slate-900 mt-1">--</h3>
+                    </div>
+                    <div class="p-3 rounded-lg bg-accent-blue text-blue-600">
+                        <span class="material-symbols-outlined">grade</span>
+                    </div>
+                </div>
+            </div>
+            <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <p class="text-slate-500 text-sm font-medium">Fail Rate</p>
+                        <h3 id="kpiFail" class="text-3xl font-bold text-slate-900 mt-1">--%</h3>
+                    </div>
+                    <div class="p-3 rounded-lg bg-accent-red text-red-600">
+                        <span class="material-symbols-outlined">assignment_late</span>
+                    </div>
+                </div>
+            </div>
+            <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <p class="text-slate-500 text-sm font-medium">At-Risk Count</p>
+                        <h3 id="kpiRisk" class="text-3xl font-bold text-slate-900 mt-1">--</h3>
+                    </div>
+                    <div class="p-3 rounded-lg bg-accent-orange text-orange-600">
+                        <span class="material-symbols-outlined">warning</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+            <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+                <h4 class="font-bold text-slate-900 mb-6">Materias con mayor reprobación</h4>
+                <div id="listReprobacion" class="space-y-6"></div>
+            </div>
+            <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+                <h4 class="font-bold text-slate-900 mb-6">Tendencia por Semestre</h4>
+                <div class="relative h-48 w-full mt-4">
+                    <svg id="chartTendencia" class="w-full h-full" preserveAspectRatio="none" viewBox="0 0 500 100"></svg>
+                    <div id="labelsTendencia" class="flex justify-between mt-6 text-[10px] text-slate-400 font-bold uppercase"></div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+                <h4 class="font-bold text-slate-900 mb-6">Carreras con mayor promedio</h4>
+                <div id="listCarreras" class="space-y-6"></div>
+            </div>
+            <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+                <h4 class="font-bold text-slate-900 mb-4">Alumnos en Riesgo</h4>
+                <table class="w-full text-left text-sm">
+                    <thead class="bg-slate-50 text-[10px] font-bold uppercase">
+                        <tr>
+                            <th class="px-4 py-2">ID</th>
+                            <th class="px-4 py-2">Carrera</th>
+                            <th class="px-4 py-2">Materia</th>
+                            <th class="px-4 py-2 text-center">Cal.</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableRiesgos" class="divide-y divide-slate-100"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        async function loadData() {
+            const params = new URLSearchParams(window.location.search);
+            const carrera = params.get('carrera') || 'todas las carreras';
+            const anio = params.get('anio') || '';
+            
+            const response = await fetch(`/api/data?carrera=${encodeURIComponent(carrera)}&anio=${anio}`);
+            const data = await response.json();
+
+            document.getElementById('kpiAvg').innerText = data.kpis.avg_grade;
+            document.getElementById('kpiFail').innerText = data.kpis.fail_rate + '%';
+            document.getElementById('kpiRisk').innerText = data.kpis.risk_count;
+
+            let reproHtml = '';
+            for (const [materia, valor] of Object.entries(data.reprobacion)) {
+                const color = valor > 25 ? 'bg-red-400' : 'bg-orange-400';
+                reproHtml += `<div class="space-y-2"><div class="flex justify-between text-xs font-medium"><span class="text-slate-600 capitalize">${materia}</span><span class="text-slate-900">${valor}%</span></div><div class="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden"><div class="${color} h-full rounded-full" style="width: ${valor}%"></div></div></div>`;
+            }
+            document.getElementById('listReprobacion').innerHTML = reproHtml;
+
+            const semestres = Object.keys(data.tendencia).sort();
+            const valores = semestres.map(s => data.tendencia[s]);
+            const max = Math.max(...valores);
+            const min = Math.min(...valores);
+            const range = max - min || 1;
+            
+            let pathData = '', pathFill = '', circles = '';
+            semestres.forEach((sem, i) => {
+                const x = (i / (semestres.length - 1)) * 500;
+                const y = 100 - ((valores[i] - min) / range) * 80;
+                pathData += `${i === 0 ? 'M' : ' L'}${x},${y}`;
+                circles += `<circle cx="${x}" cy="${y}" fill="#4f46e5" r="4"></circle>`;
+            });
+            pathFill = pathData + ' V100 H0 Z';
+            
+            document.getElementById('chartTendencia').innerHTML = `
+                <defs><linearGradient id="lineGrad" x1="0%" x2="0%" y1="0" y2="100%"><stop offset="0%" style="stop-color:#4f46e5;stop-opacity:0.2"></stop><stop offset="100%" style="stop-color:#4f46e5;stop-opacity:0"></stop></linearGradient></defs>
+                <line stroke="#f1f5f9" stroke-width="1" x1="0" x2="500" y1="20" y2="20"></line>
+                <line stroke="#f1f5f9" stroke-width="1" x1="0" x2="500" y1="40" y2="40"></line>
+                <line stroke="#f1f5f9" stroke-width="1" x1="0" x2="500" y1="60" y2="60"></line>
+                <line stroke="#f1f5f9" stroke-width="1" x1="0" x2="500" y1="80" y2="80"></line>
+                <path d="${pathFill}" fill="url(#lineGrad)"></path>
+                <path d="${pathData}" fill="none" stroke="#4f46e5" stroke-linecap="round" stroke-linejoin="round" stroke-width="3"></path>
+                ${circles}`;
+            
+            document.getElementById('labelsTendencia').innerHTML = semestres.map(s => `<span>S${s}</span>`).join('');
+
+            let carrHtml = '';
+            for (const [carr, val] of Object.entries(data.prom_carreras)) {
+                carrHtml += `<div><div class="flex justify-between text-xs mb-2"><span class="text-slate-600 font-medium capitalize">${carr}</span><span class="font-bold text-slate-900">${val}</span></div><div class="w-full bg-slate-100 h-8 rounded-lg overflow-hidden"><div class="bg-indigo-500 h-full rounded-r-sm" style="width: ${val * 10}%"></div></div></div>`;
+            }
+            document.getElementById('listCarreras').innerHTML = carrHtml;
+
+            let tableHtml = '';
+            data.tabla_riesgos.forEach(r => {
+                tableHtml += `<tr><td class="px-4 py-2 font-semibold">#${r.id_estudiante}</td><td class="px-4 py-2 capitalize text-xs">${r.carrera}</td><td class="px-4 py-2 capitalize text-xs">${r.materia}</td><td class="px-4 py-2 text-center font-bold text-red-600">${r.calificacion}</td></tr>`;
+            });
+            document.getElementById('tableRiesgos').innerHTML = tableHtml;
+
+            setTimeout(() => {
+                window.print();
+                setTimeout(() => window.close(), 500);
+            }, 1500);
+        }
+
+        window.onload = loadData;
+    </script>
+</body>
+</html>
